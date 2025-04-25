@@ -11,31 +11,14 @@ class Gripper:
             )
         
         self.can_interface.ConnectPort()
+        self.zero_threshold = 0
+        self.max_rotation = 1000000
 
-    def enable(self):
-        # Enable the gripper and set the gripper to the zero position
-        self.can_interface.EnableArm(self.motor_id)
-        self.rotate(0, 1000)
-
-        # Wait for the gripper to reach the zero position
-        time.sleep(1)
-
-        # Verify gripper status
-        status = self.read_status()
-        rotation = status.grippers_angle
-        if status.foc_status.driver_enable_status and abs(rotation)<10:
-            print("Gripper enabled and zeroed")
-            return True
-        elif status.foc_status.driver_enable_status and abs(rotation)>10:
-            print("Gripper enabled but zeroing failed")
-            return False
-        else:
-            print("Gripper enable failed")
-            return False
+    def set_zero_position(self):
+        self.can_interface.GripperCtrl(0,1,0x00, 0xAE)
 
     def disable(self):
         # Disable the gripper
-        self.can_interface.DisableArm(self.motor_id)
         self.can_interface.GripperCtrl(0, 1000, 0x02, 0)
 
     def read_status(self):
@@ -43,7 +26,9 @@ class Gripper:
         msg = self.can_interface.GetArmGripperMsgs()
         return msg.gripper_state
     
-    def rotate(self, rotation: int, torque: int):
+    def rotate(self, rotation: int, torque: int = 1000):
+        assert torque > 0, "Positive torque expected !!!"
+        assert rotation >= 0, "Non-negative rotation expected !!!"
         self.can_interface.GripperCtrl(rotation, torque, 0x01, 0)
 
     def get_rotation(self):
@@ -54,17 +39,16 @@ class Gripper:
         msg = self.can_interface.GetArmGripperMsgs()
         return msg.gripper_state.grippers_effort
     
-    def set_zero_position(self):
-        # Ensure the gripper is enabled
-        if self.read_status().foc_status.driver_enable_status:
-            # Move to zero position
-            self.can_interface.GripperCtrl(0, 1000, 0x00, 0)
-            time.sleep(1)
-            if self.read_status().grippers_angle < 10:
-                print("Gripper zeroed")
-                self.can_interface.GripperCtrl(0, 1000, 0x00, 0xAE)
-            else:
-                print("Gripper zeroing failed")
+    def back_to_zero_position(self, torque: int = 1000):
+        self.rotate(0, torque)
+        time.sleep(1)
+
+    def test_and_set_zero_threshold(self):
+        self.back_to_zero_position()
+        self.zero_threshold = self.get_rotation()
+
+
+        
             
 
             
