@@ -17,7 +17,7 @@ class PiperGripper:
                  can_auto_init: bool = True, 
                  motor_id: int = 7,
                  max_width: int = 70000,
-                 finger_len: float = 70000,
+                 finger_len: int = 70000,
                  zero_threshold: int = 500,
                  torque_threshold: int = 100,):
         self.motor_id = motor_id
